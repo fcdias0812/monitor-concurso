@@ -56,6 +56,7 @@ const log = (m) => console.log(`[build] ${m}`);
     matches: editais.filter((e) => e.name_found || e.position_found).length,
   };
   const ultimaRun = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 1').get();
+  const historico = db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 100').all();
 
   const payload = {
     geradoEm: new Date().toISOString(),
@@ -64,6 +65,7 @@ const log = (m) => console.log(`[build] ${m}`);
     cron: config.checkCron,
     stats,
     ultimaRun,
+    historico,
     editais,
   };
 
