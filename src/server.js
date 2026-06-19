@@ -61,6 +61,13 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+app.get('/api/runs', (req, res) => {
+  const rows = db
+    .prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 100')
+    .all();
+  res.json(rows);
+});
+
 app.get('/api/editais', (req, res) => {
   const rows = db
     .prepare(

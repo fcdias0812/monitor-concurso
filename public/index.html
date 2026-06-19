@@ -77,6 +77,14 @@
     .cand { font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--line); }
     .cand.target { color: #86efac; font-weight: 700; }
 
+    /* tabela do histórico */
+    .run-wrap { overflow-x: auto; }
+    .run-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
+    .run-table th { text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase;
+                    letter-spacing: .04em; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .run-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .run-table tr:hover td { background: rgba(148,163,184,.06); }
+
     /* mobile */
     @media (max-width: 600px) {
       header { padding: 14px 16px; }
@@ -100,6 +108,7 @@
     </div>
     <div class="row-actions">
       <span class="muted" id="runState"></span>
+      <button class="ghost" id="historyBtn">📜 Histórico</button>
       <button id="checkBtn">Atualizar</button>
     </div>
   </header>
@@ -138,13 +147,15 @@
         if (r.ok) { MODE = 'static'; return await r.json(); }
       } catch (_) {}
       MODE = 'api';
-      const [s, editais] = await Promise.all([
+      const [s, editais, historico] = await Promise.all([
         fetch('/api/status').then(r => r.json()),
         fetch('/api/editais').then(r => r.json()),
+        fetch('/api/runs').then(r => r.json()).catch(() => []),
       ]);
       return {
         target: s.target, cron: s.cron, running: s.running, ultimaRun: s.ultimaRun,
         stats: { total: s.total, analisados: s.analisados, comErro: s.comErro, matches: s.matches },
+        historico,
         editais,
       };
     }
@@ -281,8 +292,55 @@
         ${cands}`;
       $('overlay').classList.add('show');
     }
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return isNaN(d) ? esc(iso) : d.toLocaleString('pt-BR');
+    }
+    function fmtDur(ini, fim) {
+      if (!ini || !fim) return '—';
+      const ms = new Date(fim) - new Date(ini);
+      if (isNaN(ms) || ms < 0) return '—';
+      const s = Math.round(ms / 1000);
+      if (s < 60) return `${s}s`;
+      return `${Math.floor(s / 60)}m ${s % 60}s`;
+    }
+
+    function openHistory() {
+      const runs = DATA.historico || [];
+      const rows = runs.map(r => {
+        const ok = !/^FALHA/i.test(r.mensagem || '');
+        return `<tr>
+            <td>${fmtDate(r.iniciado_em)}</td>
+            <td style="text-align:center">${fmtDur(r.iniciado_em, r.terminado_em)}</td>
+            <td style="text-align:center">${r.terminado_em ? (r.novos ?? 0) : '—'}</td>
+            <td style="text-align:center">${r.terminado_em ? (r.total ?? 0) : '—'}</td>
+            <td><span class="badge ${r.terminado_em ? (ok ? 'b-ok' : 'b-err') : 'b-pend'}">${
+              r.terminado_em ? (ok ? '✓' : 'falha') : 'em andamento'
+            }</span> <span class="muted">${esc(r.mensagem || '')}</span></td>
+          </tr>`;
+      }).join('') || '<tr><td colspan="5" class="muted">Nenhuma verificação registrada ainda.</td></tr>';
+
+      $('modal').innerHTML = `
+        <button class="close" onclick="closeModal()">✕</button>
+        <h3>📜 Histórico de monitoramento</h3>
+        <div class="muted" style="margin-bottom:14px">${runs.length} verificação(ões) registrada(s) · mais recentes primeiro.</div>
+        <div class="run-wrap">
+          <table class="run-table">
+            <thead><tr>
+              <th>Início</th><th style="text-align:center">Duração</th>
+              <th style="text-align:center">Novos</th><th style="text-align:center">Total</th>
+              <th>Resultado</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+      $('overlay').classList.add('show');
+    }
+
     function closeModal() { $('overlay').classList.remove('show'); }
     $('overlay').onclick = (ev) => { if (ev.target.id === 'overlay') closeModal(); };
+    $('historyBtn').onclick = openHistory;
 
     $('search').oninput = () => { page = 1; applyFilter(); };
 
