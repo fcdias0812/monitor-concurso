@@ -7,5 +7,6 @@
   },
   "years": ["2026", "2025"],
   "checkCron": "0 * * * *",
-  "port": 3000
+  "port": 3000,
+  "siteUrl": "https://fcdias0812.github.io/monitor-concurso/"
 }

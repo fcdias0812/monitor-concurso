@@ -7,6 +7,7 @@ const cron = require('node-cron');
 const db = require('./db');
 const config = require('../config.json');
 const { runCheck, isRunning } = require('./monitor');
+const { notifyNewMatches } = require('./notify');
 
 const app = express();
 
@@ -17,6 +18,13 @@ function pushLog(msg) {
   logBuffer.push(line);
   if (logBuffer.length > 200) logBuffer.shift();
   console.log(line);
+}
+
+// roda a verificação e, em seguida, avisa por WhatsApp/e-mail se houver match novo
+function checkAndNotify() {
+  return runCheck(pushLog)
+    .then(() => notifyNewMatches(pushLog))
+    .catch((e) => pushLog(`Erro na verificação: ${e.message}`));
 }
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -86,7 +94,7 @@ app.post('/api/check', async (req, res) => {
     return res.json({ started: false, message: 'Verificação já em andamento.' });
   }
   res.json({ started: true });
-  runCheck(pushLog).catch((e) => pushLog(`Erro na verificação: ${e.message}`));
+  checkAndNotify();
 });
 
 // ---- start ----
@@ -99,13 +107,13 @@ app.listen(port, () => {
   );
 
   // verificação inicial (revisa todos os já cadastrados / novos)
-  runCheck(pushLog).catch((e) => pushLog(`Erro na verificação inicial: ${e.message}`));
+  checkAndNotify();
 
   // agenda verificação periódica (de hora em hora por padrão)
   if (cron.validate(config.checkCron)) {
     cron.schedule(config.checkCron, () => {
       pushLog('Disparo agendado: verificando novos editais...');
-      runCheck(pushLog).catch((e) => pushLog(`Erro no agendamento: ${e.message}`));
+      checkAndNotify();
     });
     pushLog(`Agendamento ativo (cron: ${config.checkCron}).`);
   } else {

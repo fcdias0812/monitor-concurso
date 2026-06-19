@@ -16,6 +16,7 @@ const path = require('path');
 const db = require('./db');
 const config = require('../config.json');
 const { runCheck } = require('./monitor');
+const { notifyNewMatches } = require('./notify');
 
 const DOCS = path.join(__dirname, '..', 'docs');
 const log = (m) => console.log(`[build] ${m}`);
@@ -25,6 +26,9 @@ const log = (m) => console.log(`[build] ${m}`);
 
   // 1. atualiza o banco
   await runCheck((m) => console.log(`[check] ${m}`));
+
+  // 1b. avisa (WhatsApp/e-mail) se houver match novo
+  await notifyNewMatches();
 
   // 2. monta o payload
   const editais = db

@@ -48,6 +48,12 @@ jobs:
 
       - name: Verificar editais e gerar site
         run: node src/build-static.js
+        env:
+          WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
+          WHATSAPP_APIKEY: ${{ secrets.WHATSAPP_APIKEY }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
 
       - name: Configurar Pages
         uses: actions/configure-pages@v5

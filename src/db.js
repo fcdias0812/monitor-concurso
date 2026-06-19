@@ -30,7 +30,8 @@ db.exec(`
     texto           TEXT,                   -- texto bruto extraído do PDF
 
     criado_em       TEXT NOT NULL,          -- quando entrou no banco (ISO)
-    analisado_em    TEXT                    -- quando foi analisado (ISO)
+    analisado_em    TEXT,                   -- quando foi analisado (ISO)
+    notificado      INTEGER NOT NULL DEFAULT 0  -- 1 = já avisado (WhatsApp/e-mail)
   );
 
   CREATE TABLE IF NOT EXISTS runs (
@@ -42,5 +43,12 @@ db.exec(`
     mensagem     TEXT
   );
 `);
+
+// migração para bancos já existentes (cache do CI / instalações antigas)
+try {
+  db.exec('ALTER TABLE editais ADD COLUMN notificado INTEGER NOT NULL DEFAULT 0');
+} catch (_) {
+  // coluna já existe — ok
+}
 
 module.exports = db;
