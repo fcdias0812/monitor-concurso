@@ -1,0 +1,11 @@
+{
+  "portalUrl": "https://www.indaiatuba.sp.gov.br/administracao/rh/editais-de-convocacao/",
+  "baseUrl": "https://www.indaiatuba.sp.gov.br",
+  "target": {
+    "name": "Fabrício Cauã de Oliveira Dias",
+    "position": "419"
+  },
+  "years": ["2026", "2025"],
+  "checkCron": "0 * * * *",
+  "port": 3000
+}

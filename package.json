@@ -1,0 +1,31 @@
+{
+  "name": "monitor-concurso",
+  "version": "1.0.0",
+  "description": "Monitor de editais de convocação do portal de Indaiatuba (busca nome + posição).",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "build": "node src/build-static.js",
+    "preview": "node src/serve-docs.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fcdias0812/monitor-concurso.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/fcdias0812/monitor-concurso/issues"
+  },
+  "homepage": "https://github.com/fcdias0812/monitor-concurso#readme",
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "cheerio": "^1.2.0",
+    "express": "^5.2.1",
+    "iconv-lite": "^0.7.2",
+    "node-cron": "^4.4.1",
+    "pdf-parse": "^2.4.5"
+  }
+}

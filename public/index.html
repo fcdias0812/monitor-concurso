@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Monitor de Editais — Indaiatuba</title>
+  <style>
+    :root {
+      --bg: #0f172a; --card: #1e293b; --line: #334155; --txt: #e2e8f0;
+      --muted: #94a3b8; --accent: #38bdf8; --ok: #22c55e; --warn: #f59e0b; --err: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           background: var(--bg); color: var(--txt); line-height: 1.4; }
+    header { padding: 16px 20px; border-bottom: 1px solid var(--line);
+             display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 17px; margin: 0; }
+    .target { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .target b { color: var(--accent); }
+    main { padding: 20px; max-width: 1000px; margin: 0 auto; }
+    .banner { padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; font-size: 16px; font-weight: 600; }
+    .banner.found { background: rgba(34,197,94,.15); border: 1px solid var(--ok); color: #bbf7d0; }
+    .banner.notfound { background: rgba(148,163,184,.1); border: 1px solid var(--line); color: var(--muted); }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 12px; margin-bottom: 22px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+    .card .n { font-size: 24px; font-weight: 700; }
+    .card .l { font-size: 11px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .04em; }
+    button { background: var(--accent); color: #04121d; border: 0; padding: 10px 16px; border-radius: 8px;
+             font-weight: 600; cursor: pointer; font-size: 14px; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    button.ghost { background: transparent; border: 1px solid var(--line); color: var(--txt); }
+    .row-actions { display: flex; align-items: center; gap: 12px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); animation: pulse 1.4s infinite; }
+    .dot.off { background: var(--muted); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    h2 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em;
+         margin: 24px 0 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .search { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line);
+              background: #0b1220; color: var(--txt); font-size: 14px; margin-bottom: 12px; }
+
+    /* lista de editais (cards) */
+    .list { display: flex; flex-direction: column; gap: 10px; }
+    .item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+            display: flex; align-items: center; gap: 14px; cursor: pointer; transition: border-color .15s; }
+    .item:hover { border-color: var(--accent); }
+    .item.hit { border-color: var(--ok); background: rgba(34,197,94,.07); }
+    .item .main { flex: 1; min-width: 0; }
+    .item .tt { font-weight: 600; font-size: 15px; }
+    .item .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .item .badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+    .badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .b-ok { background: rgba(34,197,94,.2); color: #86efac; }
+    .b-pend { background: rgba(148,163,184,.15); color: var(--muted); }
+    .b-err { background: rgba(239,68,68,.2); color: #fca5a5; }
+    .chev { color: var(--muted); font-size: 18px; }
+
+    /* paginação */
+    .pager { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+    .pager button { background: var(--card); border: 1px solid var(--line); color: var(--txt); padding: 8px 12px; }
+    .pager button.active { background: var(--accent); color: #04121d; border-color: var(--accent); }
+    .pager .info { color: var(--muted); font-size: 13px; }
+
+    a { color: var(--accent); }
+    .muted { color: var(--muted); }
+    .stamp { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+    /* modal */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+    .overlay.show { display: flex; }
+    .modal { background: var(--card); border: 1px solid var(--line); border-radius: 14px; max-width: 720px; width: 100%;
+             max-height: 88vh; overflow: auto; padding: 22px; }
+    .modal h3 { margin: 0 0 6px; padding-right: 30px; }
+    .close { position: absolute; top: 22px; right: 26px; background: transparent; color: var(--muted); font-size: 22px; padding: 4px 8px; }
+    .cand { font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+    .cand.target { color: #86efac; font-weight: 700; }
+
+    /* mobile */
+    @media (max-width: 600px) {
+      header { padding: 14px 16px; }
+      h1 { font-size: 15px; }
+      main { padding: 16px; }
+      .banner { font-size: 14px; padding: 14px 16px; }
+      .card .n { font-size: 20px; }
+      .item { padding: 12px 14px; gap: 10px; }
+      .item .tt { font-size: 14px; }
+      .item .badges { flex-direction: column; align-items: flex-end; gap: 4px; }
+      .chev { display: none; }
+      .row-actions { width: 100%; justify-content: space-between; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>📋 Monitor de Editais — Indaiatuba</h1>
+      <div class="target" id="target"></div>
+    </div>
+    <div class="row-actions">
+      <span class="muted" id="runState"></span>
+      <button id="checkBtn">Atualizar</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="banner notfound" id="banner">Carregando…</div>
+
+    <div class="cards" id="cards"></div>
+
+    <h2><span>Editais</span><span class="muted" id="count"></span></h2>
+    <input class="search" id="search" placeholder="🔎 filtrar por número, nome ou data…" />
+    <div class="list" id="list"></div>
+    <div class="pager" id="pager"></div>
+
+    <div class="stamp" id="stamp"></div>
+  </main>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const PER_PAGE = 10;
+
+    let MODE = 'static';      // 'static' (Pages, lê data.json) ou 'api' (servidor local)
+    let DATA = null;          // payload atual
+    let page = 1;
+    let filtered = [];
+
+    // Busca os dados: tenta data.json (GitHub Pages); se não houver, usa a API local.
+    async function fetchData() {
+      try {
+        const r = await fetch('./data.json', { cache: 'no-store' });
+        if (r.ok) { MODE = 'static'; return await r.json(); }
+      } catch (_) {}
+      MODE = 'api';
+      const [s, editais] = await Promise.all([
+        fetch('/api/status').then(r => r.json()),
+        fetch('/api/editais').then(r => r.json()),
+      ]);
+      return {
+        target: s.target, cron: s.cron, running: s.running, ultimaRun: s.ultimaRun,
+        stats: { total: s.total, analisados: s.analisados, comErro: s.comErro, matches: s.matches },
+        editais,
+      };
+    }
+
+    function applyFilter() {
+      const q = $('search').value.trim().toLowerCase();
+      const all = DATA.editais || [];
+      filtered = !q ? all : all.filter(e =>
+        [e.titulo, e.numero, e.publicado_em, e.matched_name]
+          .some(v => (v || '').toLowerCase().includes(q)));
+      const maxPage = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+      if (page > maxPage) page = maxPage;
+      renderList();
+    }
+
+    function statusBadge(e) {
+      if (e.erro) return `<span class="badge b-err">erro</span>`;
+      if (!e.processado) return `<span class="badge b-pend">pendente</span>`;
+      return `<span class="badge b-ok">analisado</span>`;
+    }
+
+    function renderList() {
+      $('count').textContent = `${filtered.length} no total`;
+      const start = (page - 1) * PER_PAGE;
+      const slice = filtered.slice(start, start + PER_PAGE);
+
+      $('list').innerHTML = slice.map((e, i) => {
+        const hit = e.name_found || e.position_found;
+        const badges = [];
+        if (e.name_found) badges.push(`<span class="badge b-ok">✓ nome</span>`);
+        if (e.position_found) badges.push(`<span class="badge b-ok">✓ pos. — ${esc(e.matched_name || '')}</span>`);
+        badges.push(statusBadge(e));
+        return `<div class="item ${hit ? 'hit' : ''}" data-idx="${start + i}">
+            <div class="main">
+              <div class="tt">${esc(e.titulo || e.numero || ('#' + e.id))}</div>
+              <div class="sub">Publicado em ${esc(e.publicado_em || '—')}</div>
+            </div>
+            <div class="badges">${badges.join('')}</div>
+            <span class="chev">›</span>
+          </div>`;
+      }).join('') || '<div class="muted">Nenhum edital encontrado.</div>';
+
+      document.querySelectorAll('.item[data-idx]').forEach(el =>
+        el.onclick = () => openDetail(filtered[Number(el.dataset.idx)]));
+
+      renderPager();
+    }
+
+    function renderPager() {
+      const total = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+      if (total <= 1) { $('pager').innerHTML = ''; return; }
+      let btns = '';
+      const add = (label, p, opts = {}) =>
+        btns += `<button ${opts.disabled ? 'disabled' : ''} class="${opts.active ? 'active' : ''}" data-p="${p}">${label}</button>`;
+
+      add('«', page - 1, { disabled: page === 1 });
+      // janela de páginas ao redor da atual
+      const win = [];
+      for (let p = 1; p <= total; p++) {
+        if (p === 1 || p === total || Math.abs(p - page) <= 1) win.push(p);
+        else if (win[win.length - 1] !== '…') win.push('…');
+      }
+      win.forEach(p => p === '…'
+        ? btns += `<span class="info">…</span>`
+        : add(p, p, { active: p === page }));
+      add('»', page + 1, { disabled: page === total });
+
+      $('pager').innerHTML = `${btns}<span class="info">página ${page} de ${total}</span>`;
+      document.querySelectorAll('.pager button[data-p]').forEach(b =>
+        b.onclick = () => { page = Number(b.dataset.p); renderList(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    }
+
+    function render() {
+      const d = DATA;
+      $('target').innerHTML =
+        `nome: <b>${esc(d.target.name)}</b> &nbsp;|&nbsp; posição: <b>${esc(d.target.position)}</b>`;
+
+      // botão / estado
+      if (MODE === 'api') {
+        $('checkBtn').textContent = 'Verificar agora';
+        $('runState').innerHTML = d.running
+          ? '<span class="dot on"></span>verificando…'
+          : '<span class="dot off"></span>aguardando';
+        $('checkBtn').disabled = !!d.running;
+      } else {
+        $('checkBtn').textContent = 'Atualizar';
+        $('runState').innerHTML = '<span class="dot off"></span>monitorado pelo GitHub Actions';
+      }
+
+      const st = d.stats;
+      const banner = $('banner');
+      if (st.matches > 0) {
+        banner.className = 'banner found';
+        banner.innerHTML = `✅ ENCONTRADO em ${st.matches} edital(is)! Veja os destacados abaixo.`;
+      } else {
+        banner.className = 'banner notfound';
+        banner.textContent = st.analisados > 0
+          ? '⏳ Ainda não encontrado em nenhum edital analisado.'
+          : 'Aguardando primeira análise…';
+      }
+
+      $('cards').innerHTML = [
+        ['Editais', st.total], ['Analisados', st.analisados],
+        ['Encontrados', st.matches], ['Erros', st.comErro],
+      ].map(([l, n]) => `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+
+      const quando = d.geradoEm
+        ? new Date(d.geradoEm).toLocaleString('pt-BR')
+        : (d.ultimaRun && d.ultimaRun.terminado_em ? new Date(d.ultimaRun.terminado_em).toLocaleString('pt-BR') : '—');
+      $('stamp').textContent = `Última atualização: ${quando}` +
+        (MODE === 'static' ? ' · próxima verificação automática em até 1h.' : '');
+
+      applyFilter();
+    }
+
+    function openDetail(e) {
+      const pos = String(DATA.target.position);
+      const cands = (e.candidatos || []).map(c => {
+        const hit = String(c.classificacao) === pos;
+        return `<div class="cand ${hit ? 'target' : ''}">${esc(c.classificacao)}º — ${esc(c.nome)}${hit ? '  ⬅ posição alvo' : ''}</div>`;
+      }).join('') || '<span class="muted">Nenhum candidato detectado neste edital.</span>';
+
+      $('modal').innerHTML = `
+        <button class="close" onclick="closeModal()">✕</button>
+        <h3>${esc(e.titulo || e.numero || ('#' + e.id))}</h3>
+        <div class="muted">Publicado: ${esc(e.publicado_em || '?')} ·
+          <a href="${esc(e.url)}" target="_blank" rel="noopener">abrir documento original</a></div>
+        ${e.erro ? `<p style="color:#fca5a5">Erro ao ler: ${esc(e.erro)}</p>` : ''}
+        <p>Nome: ${e.name_found ? '<b style="color:#86efac">ENCONTRADO</b>' : 'não encontrado'}
+           &nbsp;|&nbsp; Posição ${esc(pos)}:
+           ${e.position_found ? '<b style="color:#86efac">' + esc(e.matched_name) + '</b>' : 'não convocada'}</p>
+        ${e.name_context ? `<p class="muted">Contexto: …${esc(e.name_context)}…</p>` : ''}
+        <h2>Candidatos detectados</h2>
+        ${cands}`;
+      $('overlay').classList.add('show');
+    }
+    function closeModal() { $('overlay').classList.remove('show'); }
+    $('overlay').onclick = (ev) => { if (ev.target.id === 'overlay') closeModal(); };
+
+    $('search').oninput = () => { page = 1; applyFilter(); };
+
+    $('checkBtn').onclick = async () => {
+      if (MODE === 'api') {
+        $('checkBtn').disabled = true;
+        await fetch('/api/check', { method: 'POST' });
+        setTimeout(refresh, 800);
+      } else {
+        refresh();
+      }
+    };
+
+    async function refresh() {
+      const keepQuery = $('search').value;
+      DATA = await fetchData();
+      $('search').value = keepQuery;
+      render();
+    }
+
+    refresh();
+    // local (api) atualiza rápido p/ acompanhar a verificação; Pages (static) muda só de hora em hora
+    setInterval(() => { if (MODE === 'api') refresh(); }, 5000);
+  </script>
+</body>
+</html>

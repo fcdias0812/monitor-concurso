@@ -1,0 +1,62 @@
+name: Monitorar editais e publicar painel
+
+on:
+  schedule:
+    - cron: "0 * * * *" # de hora em hora (horário UTC)
+  workflow_dispatch: # permite rodar manualmente pelo botão "Run workflow"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# evita execuções simultâneas de deploy
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Restaura o banco SQLite da execução anterior para não rebaixar tudo.
+      # A chave usa o run_id (sempre única) e o restore-keys pega o cache mais
+      # recente com o prefixo -> efeito de "cache rolante" que se atualiza.
+      - name: Restaurar banco (cache)
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: editais-db-${{ github.run_id }}
+          restore-keys: |
+            editais-db-
+
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund
+
+      - name: Verificar editais e gerar site
+        run: node src/build-static.js
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Enviar artefato
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
