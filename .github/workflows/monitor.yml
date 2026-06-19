@@ -39,9 +39,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: data
-          key: editais-db-v2-${{ github.run_id }}
+          key: editais-db-v3-${{ github.run_id }}
           restore-keys: |
-            editais-db-v2-
+            editais-db-v3-
 
       - name: Instalar dependências
         run: npm install --no-audit --no-fund
